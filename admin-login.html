@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login - Secure Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style> 
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { display: flex; align-items: center; justify-content: center; height: 100vh; background-color: #1e272e; color: white; }
+        
+        .login-box { background: #2f3640; padding: 40px; border-radius: 15px; box-shadow: 0 15px 30px rgba(0,0,0,0.5); width: 100%; max-width: 380px; text-align: center; }
+        .login-box h2 { margin-bottom: 5px; color: #f5f6fa; }
+        .login-box p { color: #7f8fa6; margin-bottom: 30px; font-size: 0.9rem; }
+        
+        input { width: 100%; padding: 15px; margin-bottom: 20px; border: none; border-radius: 8px; background: #353b48; color: white; font-size: 1rem; transition: 0.3s; }
+        input:focus { outline: none; box-shadow: 0 0 0 2px #e84118; }
+        input::placeholder { color: #718093; }
+
+        button { width: 100%; padding: 15px; background: #e84118; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #c23616; transform: translateY(-2px); }
+        
+        .back-link { display: block; margin-top: 25px; color: #7f8fa6; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: white; }
+
+        #toast { visibility: hidden; min-width: 250px; background-color: #e84118; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; top: 30px; opacity: 0; transition: 0.4s; }
+        #toast.show { visibility: visible; opacity: 1; transform: translateY(10px); }
+    </style>
+</head>
+<body>
+    <div id="toast"></div>
+
+    <div class="login-box">
+        <h2>System Admin</h2>
+        <p>Restricted Access Area</p>
+        <form id="adminLoginForm">
+            <input type="text" id="username" placeholder="Admin Username" required autocomplete="off">
+            <input type="password" id="password" placeholder="Admin Password" required>
+            <button type="submit" id="btn">Authenticate</button>
+        </form>
+        <a href="/index.html" class="back-link">← Return to User Portal</a>
+    </div>
+
+    <script>
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = "show";
+            setTimeout(() => { toast.className = ""; }, 3000);
+        }
+
+        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn');
+            btn.innerText = "Verifying...";
+            
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            const data = await res.json();
+            btn.innerText = "Authenticate";
+            
+            if(res.ok) {
+                if (data.role === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    showToast('Access Denied: Not an administrator.');
+                    await fetch('/logout'); 
+                }
+            } else {
+                showToast(data.error);
+            }
+        });
+    </script>
+</body>
+</html>

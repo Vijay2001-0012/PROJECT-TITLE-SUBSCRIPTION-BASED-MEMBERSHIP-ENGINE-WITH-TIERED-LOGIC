@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: #f0f2f5; color: #333; }
+        
+        .navbar { background: #1e272e; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; color: white;}
+        .navbar h2 { font-weight: 600; letter-spacing: 1px; }
+        .btn-logout { background: #ff4757; color: white; border: none; padding: 8px 20px; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        .btn-logout:hover { background: #ff6b81; }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        
+        .grid-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card h3 { margin-bottom: 20px; color: #1e272e; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px;}
+        
+        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dcdde1; border-radius: 8px; font-size: 1rem; }
+        input:focus, select:focus { outline: none; border-color: #0fb9b1; }
+        
+        button[type="submit"] { width: 100%; padding: 12px; background: #0fb9b1; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 1rem;}
+        button[type="submit"]:hover { background: #0bd1c8; }
+
+        /* Table Styles */
+        .table-container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto;}
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #1e272e; font-weight: 600; }
+        tr:hover { background-color: #f1f2f6; }
+        .role-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .role-admin { background: #ffcccb; color: #d32f2f; }
+        .role-user { background: #e0f7fa; color: #00838f; }
+
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; right: 30px; bottom: 30px; opacity: 0; transition: 0.4s; }
+        #toast.show { visibility: visible; opacity: 1; transform: translateY(-10px); }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h2>Admin Console</h2>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+    </nav>
+
+    <div class="container">
+        <div class="grid-forms">
+            <!-- Add Points Form -->
+            <div class="card">
+                <h3>Reward User Points</h3>
+                <form id="pointsForm">
+                    <input type="number" id="userId" placeholder="User ID" required>
+                    <input type="number" id="pointsAmount" placeholder="Points Amount (Max 10000 limit)" required>
+                    <button type="submit">Credit Points</button>
+                </form>
+            </div>
+
+            <!-- Add Course Form -->
+            <div class="card">
+                <h3>Publish New Course</h3>
+                <form id="courseForm">
+                    <input type="text" id="courseName" placeholder="Course Title" required>
+                    <select id="courseCat"> 
+                        <option>Frontend</option> 
+                        <option>Backend</option> 
+                        <option>Database</option> 
+                    </select>
+                    <select id="courseLevel"> 
+                        <option value="basic">Basic Level</option> 
+                        <option value="advanced">Advanced Level</option> 
+                        <option value="premium">Premium Level</option> 
+                    </select>
+                    <input type="number" id="coursePoints" placeholder="Points Required to Enroll" required>
+                    <button type="submit">Publish Course</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- User Table -->
+        <div class="table-container">
+            <h3 style="margin-bottom:15px;">Registered Users Directory</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>System Role</th>
+                        <th>Available Points</th>
+                    </tr>
+                </thead>
+                <tbody id="userTable">
+                    <!-- Populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = "show";
+            setTimeout(() => { toast.className = ""; }, 3000);
+        }
+
+        async function loadUsers() {
+            const res = await fetch('/admin/users');
+            if(!res.ok) return window.location.href = '/';
+            const users = await res.json();
+            document.getElementById('userTable').innerHTML = users.map(u => 
+                `<tr>
+                    <td>#${u.id}</td>
+                    <td style="font-weight:600;">${u.username}</td>
+                    <td><span class="role-badge ${u.role === 'admin' ? 'role-admin' : 'role-user'}">${u.role.toUpperCase()}</span></td>
+                    <td>⭐ ${u.points}</td>
+                </tr>`
+            ).join('');
+        }
+
+        document.getElementById('pointsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/admin/add-points', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: document.getElementById('userId').value,
+                    points: document.getElementById('pointsAmount').value
+                })
+            });
+            const data = await res.json();
+            showToast(data.message || data.error);
+            document.getElementById('pointsForm').reset();
+            loadUsers();
+        });
+
+        document.getElementById('courseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/admin/add-course', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: document.getElementById('courseName').value,
+                    category: document.getElementById('courseCat').value,
+                    level: document.getElementById('courseLevel').value,
+                    points_required: document.getElementById('coursePoints').value
+                })
+            });
+            const data = await res.json();
+            showToast(data.message || data.error);
+            document.getElementById('courseForm').reset();
+        });
+
+        async function logout() { await fetch('/logout'); window.location.href = '/'; }
+
+        loadUsers();
+    </script>
+</body>
+</html>

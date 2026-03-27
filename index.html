@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Subscription - Welcome</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { display: flex; height: 100vh; background-color: #f4f7fa; }
+        
+        /* Left Hero Section */
+        .hero { flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; flex-direction: column; justify-content: center; padding: 50px; }
+        .hero h1 { font-size: 3rem; margin-bottom: 20px; font-weight: 600; }
+        .hero p { font-size: 1.2rem; opacity: 0.9; line-height: 1.6; }
+        
+        /* Right Auth Section */
+        .auth-container { flex: 1; display: flex; align-items: center; justify-content: center; background: white; position: relative; }
+        .auth-box { width: 100%; max-width: 400px; padding: 40px; }
+        .auth-box h2 { font-size: 2rem; color: #333; margin-bottom: 10px; }
+        .auth-box p { color: #666; margin-bottom: 30px; }
+        
+        /* Inputs & Buttons */
+        .input-group { margin-bottom: 20px; }
+        .input-group input { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; transition: border 0.3s; background: #fdfdfd; }
+        .input-group input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 8px rgba(102, 126, 234, 0.2); }
+        
+        button { width: 100%; padding: 15px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s, background 0.3s; }
+        button:hover { background: #5a6fe0; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        
+        .toggle-link { text-align: center; margin-top: 20px; color: #666; }
+        .toggle-link span { color: #667eea; font-weight: 600; cursor: pointer; transition: color 0.3s; }
+        .toggle-link span:hover { color: #764ba2; text-decoration: underline; }
+        
+        .admin-link { position: absolute; top: 20px; right: 30px; color: #ff4757; font-weight: 600; text-decoration: none; border: 1px solid #ff4757; padding: 8px 15px; border-radius: 20px; transition: 0.3s; }
+        .admin-link:hover { background: #ff4757; color: white; }
+
+        /* Custom Toast */
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1; right: 30px; bottom: 30px; font-size: 16px; opacity: 0; transition: opacity 0.4s, transform 0.4s; transform: translateY(20px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        #toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
+        #toast.error { background-color: #ff4757; }
+        #toast.success { background-color: #2ed573; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>Unlock Your Potential.</h1>
+        <p>Join the Pro Subscription Platform to access exclusive courses in Frontend, Backend, and Database engineering. Level up your skills today.</p>
+    </div>
+    
+    <div class="auth-container">
+        <a href="/admin-login.html" class="admin-link">Admin Portal</a>
+        <div class="auth-box">
+            <h2 id="formTitle">Welcome Back</h2>
+            <p id="formSubtitle">Please enter your details to sign in.</p>
+            
+            <form id="authForm">
+                <div class="input-group">
+                    <input type="text" id="username" placeholder="Username" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="password" placeholder="Password" required>
+                </div>
+                <button type="submit" id="submitBtn">Sign In</button>
+            </form>
+            
+            <div class="toggle-link">
+                <p id="toggleText">Don't have an account? <span onclick="toggleMode()">Sign up here</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">Message goes here</div>
+
+    <script>
+        let isLogin = true;
+
+        function showToast(msg, type) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = `show ${type}`;
+            setTimeout(() => { toast.className = toast.className.replace(`show ${type}`, ""); }, 3000);
+        }
+
+        function toggleMode() {
+            isLogin = !isLogin;
+            document.getElementById('formTitle').innerText = isLogin ? 'Welcome Back' : 'Create Account';
+            document.getElementById('formSubtitle').innerText = isLogin ? 'Please enter your details to sign in.' : 'Join us to kickstart your journey.';
+            document.getElementById('submitBtn').innerText = isLogin ? 'Sign In' : 'Sign Up';
+            document.getElementById('toggleText').innerHTML = isLogin 
+                ? 'Don\'t have an account? <span onclick="toggleMode()">Sign up here</span>' 
+                : 'Already have an account? <span onclick="toggleMode()">Sign in</span>';
+        }
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = 'Processing...';
+            btn.disabled = true;
+
+            const url = isLogin ? '/login' : '/signup';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            
+            const data = await res.json();
+            btn.innerText = isLogin ? 'Sign In' : 'Sign Up';
+            btn.disabled = false;
+
+            if(res.ok) {
+                showToast(data.message, 'success');
+                setTimeout(() => {
+                    if(isLogin) window.location.href = data.role === 'admin' ? '/admin.html' : '/dashboard.html';
+                    else toggleMode();
+                }, 1000);
+            } else {
+                showToast(data.error, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

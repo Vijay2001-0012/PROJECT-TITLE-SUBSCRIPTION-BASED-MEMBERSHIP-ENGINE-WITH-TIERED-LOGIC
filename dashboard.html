@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Dashboard - ProPortal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { display: flex; background-color: #f4f7fa; color: #333; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar Menu */
+        .sidebar { width: 260px; background: #1e272e; color: white; display: flex; flex-direction: column; padding: 20px 0; }
+        .sidebar h2 { text-align: center; margin-bottom: 30px; color: #0fb9b1; font-weight: 600; font-size: 1.5rem; letter-spacing: 1px;}
+        .menu-item { padding: 15px 25px; cursor: pointer; transition: 0.3s; font-size: 1.05rem; display: flex; align-items: center; gap: 10px; color: #a4b0be; }
+        .menu-item:hover, .menu-item.active { background: #2f3640; color: white; border-left: 4px solid #0fb9b1; }
+        .sidebar-spacer { flex-grow: 1; }
+        .logout-btn { padding: 15px 25px; cursor: pointer; color: #ff4757; transition: 0.3s; display: flex; gap: 10px; }
+        .logout-btn:hover { background: rgba(255, 71, 87, 0.1); }
+
+        /* Main Content Area */
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+        .tab-section { display: none; animation: fadeIn 0.4s; }
+        .tab-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h1.page-title { font-size: 2rem; margin-bottom: 25px; color: #2f3640; font-weight: 600; }
+
+        /* Dashboard & Plans */
+        .points-banner { background: #fff3cd; color: #856404; padding: 15px 20px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 25px; font-weight: 500; display: inline-block; }
+        .pricing-grid { display: flex; gap: 25px; flex-wrap: wrap; margin-top: 20px; }
+        .pricing-card { background: white; border-radius: 12px; padding: 30px; width: 280px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .pricing-card h3 { font-size: 1.4rem; margin-bottom: 10px; }
+        .pricing-card .price { font-size: 2rem; color: #0fb9b1; font-weight: 600; margin-bottom: 15px; }
+        .pricing-card button { width: 100%; padding: 12px; border: none; border-radius: 6px; background: #2f3640; color: white; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .pricing-card button:hover { background: #0fb9b1; }
+
+        /* Courses Grid */
+        .courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+        .course-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid #ccc; display: flex; flex-direction: column; }
+        .course-card.Frontend { border-color: #ff7f50; } .course-card.Backend { border-color: #2ed573; } .course-card.Database { border-color: #1e90ff; }
+        .course-card h4 { font-size: 1.1rem; margin-bottom: 5px; }
+        .tag { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: white; margin-bottom: 10px; }
+        .tag.basic { background: #2ed573; } .tag.advanced { background: #ffa502; } .tag.premium { background: #ff4757; }
+        .course-card button { margin-top: auto; padding: 10px; background: #0fb9b1; color: white; border: none; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+        .course-card button:hover { background: #0bd1c8; }
+        .course-card.enrolled button { background: #f1f2f6; color: #aaa; cursor: not-allowed; }
+
+        /* Lists */
+        .list-item { background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #0fb9b1; }
+        .list-item.expired { border-left-color: #ff4757; opacity: 0.8; filter: grayscale(1); }
+
+        /* Profile Card */
+        .profile-card { background: white; padding: 40px; border-radius: 12px; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .profile-card p { font-size: 1.1rem; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+        /* Custom Payment Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; visibility: hidden; opacity: 0; transition: 0.3s; z-index: 1000; }
+        .modal-overlay.active { visibility: visible; opacity: 1; }
+        .payment-modal { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; transform: translateY(20px); transition: 0.3s; }
+        .modal-overlay.active .payment-modal { transform: translateY(0); }
+        .payment-modal h3 { margin-bottom: 10px; color: #2f3640; }
+        .payment-modal p { color: #666; margin-bottom: 25px; font-size: 0.9rem; }
+        .pay-option { display: block; width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fdfdfd; font-size: 1rem; cursor: pointer; transition: 0.3s; text-align: left; font-weight: 500; }
+        .pay-option:hover { border-color: #0fb9b1; background: #e0f7fa; transform: translateX(5px); }
+        .close-modal { margin-top: 10px; color: #ff4757; cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
+
+        /* Toast */
+        #toast { visibility: hidden; min-width: 250px; background-color: #2f3640; color: #fff; text-align: center; border-radius: 8px; padding: 15px; position: fixed; right: 30px; bottom: 30px; opacity: 0; transition: 0.4s; z-index: 2000; }
+        #toast.show { visibility: visible; opacity: 1; transform: translateY(-10px); }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <h2>ProPortal</h2>
+        <div class="menu-item active" onclick="switchTab('dashboard', this)">🏠 Dashboard</div>
+        <div class="menu-item" onclick="switchTab('valid', this)">📚 Valid Courses</div>
+        <div class="menu-item" onclick="switchTab('registered', this)">✅ Registered Courses</div>
+        <div class="menu-item" onclick="switchTab('expired', this)">⏳ Expired Courses</div>
+        <div class="menu-item" onclick="switchTab('profile', this)">👤 My Profile</div>
+        
+        <div class="sidebar-spacer"></div>
+        <div class="logout-btn" onclick="logout()">🚪 Logout</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        
+        <!-- Dashboard Tab -->
+        <div id="tab-dashboard" class="tab-section active">
+            <h1 class="page-title">Welcome Back</h1>
+            <div class="points-banner">⭐ Available Points: <span id="pointsBalance">0</span> / 10000</div>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #0fb9b1; margin-bottom: 30px;">
+                <h3 style="margin-bottom: 5px;">Current Plan: <span id="currentPlanStatus" style="color: #0fb9b1;">Loading...</span></h3>
+                <p style="color: #666; font-size: 0.9rem;" id="currentPlanDays">Check below to upgrade your subscription.</p>
+            </div>
+
+            <h2>Subscription Plans</h2>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Basic</h3>
+                    <div class="price">₹0</div>
+                    <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">30 Days • Basic courses</p>
+                    <button onclick="subscribeFree()">Activate Free</button>
+                </div>
+                <div class="pricing-card" style="border: 2px solid #0fb9b1;">
+                    <h3>Standard</h3>
+                    <div class="price">₹300</div>
+                    <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">90 Days • Basic + Advanced</p>
+                    <button onclick="openPaymentModal('standard')">Buy Standard</button>
+                </div>
+                <div class="pricing-card">
+                    <h3>Premium</h3>
+                    <div class="price">₹500</div>
+                    <p style="color:#666; margin-bottom:20px; font-size:0.9rem;">365 Days • All Access</p>
+                    <button onclick="openPaymentModal('premium')">Buy Premium</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Valid Courses Tab -->
+        <div id="tab-valid" class="tab-section">
+            <h1 class="page-title">Course Catalog</h1>
+            <p style="margin-bottom: 20px; color: #666;">Explore our massive library and enroll using your points.</p>
+            <div class="courses-grid" id="coursesList"></div>
+        </div>
+
+        <!-- Registered Courses Tab -->
+        <div id="tab-registered" class="tab-section">
+            <h1 class="page-title">Active Registrations</h1>
+            <p style="margin-bottom: 20px; color: #666;">Courses you are currently learning (Requires Active Subscription).</p>
+            <div id="registeredList"></div>
+        </div>
+
+        <!-- Expired Courses Tab -->
+        <div id="tab-expired" class="tab-section">
+            <h1 class="page-title">Expired Courses</h1>
+            <p style="margin-bottom: 20px; color: #666;">Courses you previously enrolled in but lost access to due to subscription expiry.</p>
+            <div id="expiredList"></div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="tab-profile" class="tab-section">
+            <h1 class="page-title">My Profile</h1>
+            <div class="profile-card">
+                <p><strong>Username:</strong> <span id="profUsername">...</span></p>
+                <p><strong>System Role:</strong> <span id="profRole">...</span></p>
+                <p><strong>Lifetime Points:</strong> ⭐ <span id="profPoints">...</span></p>
+                <p><strong>Active Plan:</strong> <span id="profPlan">...</span></p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Payment Options Modal -->
+    <div class="modal-overlay" id="paymentOverlay">
+        <div class="payment-modal">
+            <h3>Select Payment Method</h3>
+            <p>Secure checkout for the <strong id="modalPlanName" style="color:#0fb9b1; text-transform:uppercase;"></strong> Plan.</p>
+            
+            <button class="pay-option" onclick="processPayment('UPI')">📱 UPI / Google Pay / PhonePe</button>
+            <button class="pay-option" onclick="processPayment('Card')">💳 Credit / Debit Card</button>
+            <button class="pay-option" onclick="processPayment('NetBanking')">🏦 Net Banking</button>
+            
+            <div class="close-modal" onclick="closePaymentModal()">Cancel Transaction</div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        let selectedPlanToBuy = '';
+        let globalSubStatus = false;
+
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = "show";
+            setTimeout(() => { toast.className = ""; }, 3000);
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-section').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        async function initDashboard() {
+            // 1. Load Subscription & Points
+            const res = await fetch('/subscription-status');
+            if(!res.ok) return window.location.href = '/';
+            const data = await res.json();
+            
+            document.getElementById('pointsBalance').innerText = data.points;
+            
+            if(data.subscription) {
+                globalSubStatus = true;
+                document.getElementById('currentPlanStatus').innerText = data.subscription.plan.toUpperCase();
+                document.getElementById('currentPlanDays').innerText = `Valid for ${data.subscription.remaining_days} more days.`;
+                document.getElementById('profPlan').innerText = data.subscription.plan.toUpperCase();
+            } else {
+                globalSubStatus = false;
+                document.getElementById('currentPlanStatus').innerText = "NO ACTIVE PLAN";
+                document.getElementById('currentPlanStatus').style.color = "#ff4757";
+                document.getElementById('profPlan').innerText = "None";
+            }
+
+            // 2. Load Profile
+            const profRes = await fetch('/profile');
+            const profData = await profRes.json();
+            document.getElementById('profUsername').innerText = profData.username;
+            document.getElementById('profRole').innerText = profData.role.toUpperCase();
+            document.getElementById('profPoints').innerText = profData.points;
+
+            // 3. Load Valid Courses
+            const courseRes = await fetch('/courses');
+            const courses = await courseRes.json();
+            let html = '';
+            courses.forEach(c => {
+                html += `
+                <div class="course-card ${c.category}">
+                    <span class="tag ${c.level}">${c.level.toUpperCase()}</span>
+                    <h4>${c.name}</h4>
+                    <p style="font-size: 0.8rem; color: #777; margin-bottom: 15px;">Category: ${c.category} <br>Cost: <b>${c.points_required} Pts</b></p>
+                    <button onclick="enroll(${c.id})">Enroll Now</button>
+                </div>`;
+            });
+            document.getElementById('coursesList').innerHTML = html;
+
+            // 4. Load Enrollments (Registered & Expired)
+            const enrollRes = await fetch('/my-enrollments');
+            const enrollData = await enrollRes.json();
+            
+            let regHtml = '';
+            let expHtml = '';
+
+            if (enrollData.enrollments.length === 0) {
+                regHtml = '<p style="color:#888;">You have not enrolled in any courses yet.</p>';
+                expHtml = '<p style="color:#888;">No expired courses found.</p>';
+            } else {
+                enrollData.enrollments.forEach(e => {
+                    const dateStr = new Date(e.enrollment_date).toLocaleDateString();
+                    const itemHTML = `
+                        <div class="list-item ${!enrollData.hasActiveSub ? 'expired' : ''}">
+                            <div>
+                                <h3 style="font-size:1.1rem; color:#2f3640;">${e.name}</h3>
+                                <p style="font-size:0.85rem; color:#666;">Level: ${e.level.toUpperCase()} | Enrolled: ${dateStr}</p>
+                            </div>
+                            <button style="padding: 8px 15px; background:${enrollData.hasActiveSub ? '#0fb9b1' : '#ccc'}; color:white; border:none; border-radius:5px; cursor:${enrollData.hasActiveSub ? 'pointer' : 'not-allowed'};">
+                                ${enrollData.hasActiveSub ? '▶ Watch Course' : '🔒 Access Locked'}
+                            </button>
+                        </div>
+                    `;
+
+                    if(enrollData.hasActiveSub) regHtml += itemHTML;
+                    else expHtml += itemHTML;
+                });
+            }
+
+            if(enrollData.hasActiveSub) expHtml = '<p style="color:#888;">You have an active subscription! None of your courses are currently expired.</p>';
+            if(!enrollData.hasActiveSub && enrollData.enrollments.length > 0) regHtml = '<p style="color:#ff4757; font-weight:500;">Your subscription has expired. Please renew to access your courses.</p>';
+
+            document.getElementById('registeredList').innerHTML = regHtml;
+            document.getElementById('expiredList').innerHTML = expHtml;
+        }
+
+        // Enrollment Logic
+        async function enroll(course_id) {
+            const res = await fetch('/enroll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ course_id })
+            });
+            const data = await res.json();
+            showToast(data.message || data.error);
+            if(res.ok) initDashboard();
+        }
+
+        // Basic Free Subscription
+        async function subscribeFree() {
+            const res = await fetch('/subscribe-free', { method: 'POST' });
+            const data = await res.json();
+            showToast(data.message || data.error);
+            initDashboard();
+        }
+
+        // --- PAYMENT MODAL LOGIC ---
+        function openPaymentModal(plan) {
+            selectedPlanToBuy = plan;
+            document.getElementById('modalPlanName').innerText = plan;
+            document.getElementById('paymentOverlay').classList.add('active');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentOverlay').classList.remove('active');
+        }
+
+        async function processPayment(method) {
+            closePaymentModal();
+            showToast(`Connecting securely via ${method}...`);
+            
+            // 1. Create Backend Order
+            const res = await fetch('/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: selectedPlanToBuy })
+            });
+            const data = await res.json();
+            if(!res.ok) return showToast(data.error);
+
+            // 2. Trigger Razorpay Popup natively
+            const options = {
+                key: data.key,
+                amount: data.amount,
+                currency: "INR",
+                name: "ProPortal Education",
+                description: `Upgrade to ${selectedPlanToBuy.toUpperCase()} Plan`,
+                order_id: data.orderId,
+                theme: { color: "#0fb9b1" },
+                handler: async function (response) {
+                    const verifyRes = await fetch('/verify-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...response, plan: selectedPlanToBuy })
+                    });
+                    const verifyData = await verifyRes.json();
+                    showToast(verifyData.message || verifyData.error);
+                    initDashboard();
+                }
+            };
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        async function logout() {
+            await fetch('/logout');
+            window.location.href = '/';
+        }
+
+        // Start Dashboard Build
+        initDashboard();
+    </script>
+</body>
+</html>
